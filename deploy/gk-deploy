@@ -16,6 +16,7 @@
 
 PROG="$(basename "${0}")"
 TOPOLOGY='topology.json'
+HEKETI_CFG='heketi.json'
 LOG_FILE=''
 VERBOSE=0
 CLI=''
@@ -151,6 +152,7 @@ eval_output() {
 abort() {
   eval_output "${CLI} delete svc heketi 2>&1"
   eval_output "${CLI} delete sa heketi-service-account 2>&1"
+  eval_output "${CLI} delete configmap heketi-config 2>&1"
   eval_output "${CLI} delete all,service,jobs,deployment,secret --selector=\"deploy-heketi\" 2>&1"
   eval_output "${CLI} delete svc/heketi-storage-endpoints 2>&1"
   if [[ "${CLI}" == *oc\ * ]]; then
@@ -469,7 +471,7 @@ if [[ ${LOAD} -eq 0 ]]; then
     eval_output "${CLI} create -f ${TEMPLATES}/deploy-heketi-template.yaml 2>&1"
     eval_output "${CLI} create -f ${TEMPLATES}/heketi-service-account.yaml 2>&1"
     eval_output "${CLI} create -f ${TEMPLATES}/heketi-template.yaml 2>&1"
-    eval_output "${CLI} create configmap heketi-config --from-file=${TEMPLATES}/heketi.json 2>&1"
+    eval_output "${CLI} create configmap heketi-config --from-file=${HEKETI_CFG} 2>&1"
     if [[ $GLUSTER -eq 1 ]]; then
       eval_output "${CLI} create -f ${TEMPLATES}/glusterfs-template.yaml 2>&1"
     fi
