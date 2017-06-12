@@ -17,9 +17,6 @@
 
     "_kubeexec_comment": "Kubernetes configuration",
     "kubeexec": {
-      "host" :"https://master.openshift:8443",
-      "user": "admin",
-      "password": "admin",
       "namespace": "storage"
     },
 
