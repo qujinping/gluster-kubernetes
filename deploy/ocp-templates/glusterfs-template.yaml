@@ -117,6 +117,7 @@ objects:
             path: "/etc/ssl"
         restartPolicy: Always
         terminationGracePeriodSeconds: 30
+        serviceAccountName: heketi-service-account
         dnsPolicy: ClusterFirst
         securityContext: {}
 parameters:

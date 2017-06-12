@@ -473,7 +473,7 @@ if [[ ${LOAD} -eq 0 ]]; then
       eval_output "${CLI} create -f ${TEMPLATES}/glusterfs-template.yaml 2>&1"
     fi
     eval_output "${CLI} policy add-role-to-user edit system:serviceaccount:${NAMESPACE}:heketi-service-account 2>&1"
-    eval_output "${CLI} adm policy add-scc-to-user privileged -z heketi-service-account"
+    eval_output "${CLI} adm policy add-scc-to-user privileged system:serviceaccount:${NAMESPACE}:heketi-service-account 2>&1"
   else
     eval_output "${CLI} create -f ${TEMPLATES}/heketi-service-account.yaml 2>&1"
     eval_output "${CLI} create clusterrolebinding heketi-sa-view --clusterrole=edit --serviceaccount=${NAMESPACE}:heketi-service-account 2>&1"
