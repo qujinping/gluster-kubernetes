@@ -79,6 +79,8 @@ objects:
           ports:
           - containerPort: 8080
           volumeMounts:
+          - name: config
+            mountPath: /etc/heketi
           - name: db
             mountPath: /var/lib/heketi
           readinessProbe:
@@ -98,6 +100,9 @@ objects:
           glusterfs:
             endpoints: heketi-storage-endpoints
             path: heketidbstorage
+        - name: config
+          configMap:
+            name: heketi-config
 parameters:
 - name: HEKETI_USER_KEY
   displayName: Heketi User Secret

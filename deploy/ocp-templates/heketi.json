@@ -1,0 +1,36 @@
+{
+  "_port_comment": "Heketi Server Port Number",
+  "port": "8080",
+
+  "_glusterfs_comment": "GlusterFS Configuration",
+  "glusterfs": {
+    "_executor_comment": [
+      "Execute plugin. Possible choices: mock, ssh",
+      "mock: This setting is used for testing and development.",
+      "      It will not send commands to any node.",
+      "ssh:  This setting will notify Heketi to ssh to the nodes.",
+      "      It will need the values in sshexec to be configured.",
+      "kubernetes: Communicate with GlusterFS containers over",
+      "            Kubernetes exec api."
+    ],
+    "executor": "kubernetes",
+
+    "_kubeexec_comment": "Kubernetes configuration",
+    "kubeexec": {
+      "host" :"https://master.openshift:8443",
+      "user": "admin",
+      "password": "admin",
+      "namespace": "storage"
+    },
+
+    "_db_comment": "Database file name",
+    "db": "/var/lib/heketi/heketi.db",
+
+    "_loglevel_comment": [
+      "Set log level. Choices are:",
+      "  none, critical, error, warning, info, debug",
+      "Default is warning"
+    ],
+    "loglevel" : "debug"
+  }
+}
