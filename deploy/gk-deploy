@@ -30,13 +30,13 @@ ABORT=0
 NODES=""
 SKIP_PREREQ=0
 LOAD=0
-ADMIN_KEY=""
-USER_KEY=""
+ADMIN_KEY_SECRET="heketi-admin-secret"
+USER_KEY_SECRET="heketi-user-secret"
 DAEMONSET_LABEL=""
 
 usage() {
   echo -e "USAGE: ${PROG} [-ghvy] [-c CLI] [-t <TEMPLATES>] [-n NAMESPACE] [-w <SECONDS>]
-       [--load] [--admin-key <ADMIN_KEY>] [--user-key <USER_KEY>] [-l <LOG_FILE>]
+       [--load] [--admin-key-secret <ADMIN_KEY_SECRET>] [--user-key-secret <USER_KEY_SECRET>] [-l <LOG_FILE>]
        [--daemonset-label <DAEMONSET_LABEL> ]  [<TOPOLOGY>]\n"
 }
 
@@ -80,12 +80,12 @@ Options:
               device or node, then restart with --load to skip gluster
               deployment and re-run topology load command.
 
-  --admin-key ADMIN_KEY
+  --admin-key-secret ADMIN_KEY_SECRET
               Secret for heketi administrator user. Heketi admin has access to all
               the APIs. admin key: string, Shared secret.
               Eg: MySecret
 
-  --user-key USER_KEY
+  --user-key-secret USER_KEY_SECRET
               Secret for heketi general user. Heketi user has access to only Volume
               APIs. user key: string, Shared secret.
               Eg: MyVolumeSecret
@@ -153,6 +153,9 @@ abort() {
   eval_output "${CLI} delete svc heketi 2>&1"
   eval_output "${CLI} delete sa heketi-service-account 2>&1"
   eval_output "${CLI} delete configmap heketi-config 2>&1"
+  eval_output "${CLI} delete secret heketi-admin-secret 2>&1"
+  eval_output "${CLI} delete secret heketi-user-secret 2>&1"
+  eval_output "${CLI} delete storageclass gluster-heketi 2>&1"
   eval_output "${CLI} delete all,service,jobs,deployment,secret --selector=\"deploy-heketi\" 2>&1"
   eval_output "${CLI} delete svc/heketi-storage-endpoints 2>&1"
   if [[ "${CLI}" == *oc\ * ]]; then
@@ -282,13 +285,13 @@ while [[ $# -ge 1 ]]; do
         SKIP_PREREQ=1
         if [[ "$key" == "--yes" ]]; then keypos=$keylen; fi
         ;;
-        -admin-key*)
-        ADMIN_KEY=$(assign "${key:${keypos}}" "${2}")
+        -admin-key-secret*)
+        ADMIN_KEY_SECRET=$(assign "${key:${keypos}}" "${2}")
         if [[ $? -eq 2 ]]; then shift; fi
         keypos=$keylen
         ;;
-        -user-key*)
-        USER_KEY=$(assign "${key:${keypos}}" "${2}")
+        -user-key-secret*)
+        USER_KEY_SECRET=$(assign "${key:${keypos}}" "${2}")
         if [[ $? -eq 2 ]]; then shift; fi
         keypos=$keylen
         ;;
@@ -468,10 +471,13 @@ if [[ ${LOAD} -eq 0 ]]; then
   fi
   output "OK"
   if [[ "${CLI}" == *oc\ * ]]; then
+    eval_output "${CLI} create -f ${TEMPLATES}/heketi-admin-secret.yaml 2>&1"
+    eval_output "${CLI} create -f ${TEMPLATES}/heketi-user-secret.yaml 2>&1"
     eval_output "${CLI} create -f ${TEMPLATES}/deploy-heketi-template.yaml 2>&1"
     eval_output "${CLI} create -f ${TEMPLATES}/heketi-service-account.yaml 2>&1"
     eval_output "${CLI} create -f ${TEMPLATES}/heketi-template.yaml 2>&1"
     eval_output "${CLI} create configmap heketi-config --from-file=${HEKETI_CFG} 2>&1"
+    eval_output "${CLI} create -f ${TEMPLATES}/glusterfs-storageclass.yaml 2>&1"
     if [[ $GLUSTER -eq 1 ]]; then
       eval_output "${CLI} create -f ${TEMPLATES}/glusterfs-template.yaml 2>&1"
     fi
@@ -513,7 +519,7 @@ fi
 
 if [[ ${LOAD} -eq 0 ]]; then
   if [[ "${CLI}" == *oc\ * ]]; then
-    eval_output "${CLI} process ${OC_PROCESS_VAL_SWITCH} HEKETI_ADMIN_KEY=${ADMIN_KEY} ${OC_PROCESS_VAL_SWITCH} HEKETI_USER_KEY=${USER_KEY} deploy-heketi | ${CLI} create -f - 2>&1"
+    eval_output "${CLI} process ${OC_PROCESS_VAL_SWITCH} HEKETI_ADMIN_KEY_SECRET=${ADMIN_KEY_SECRET} ${OC_PROCESS_VAL_SWITCH} HEKETI_USER_KEY_SECRET=${USER_KEY_SECRET} deploy-heketi | ${CLI} create -f - 2>&1"
   else
     eval_output "${CLI} create -f ${TEMPLATES}/deploy-heketi-deployment.yaml 2>&1"
   fi
@@ -592,7 +598,7 @@ fi
 eval_output "${CLI} delete all,service,jobs,deployment,secret --selector=\"deploy-heketi\" 2>&1"
 
 if [[ "${CLI}" == *oc\ * ]]; then
-  eval_output "${CLI} process ${OC_PROCESS_VAL_SWITCH} HEKETI_ADMIN_KEY=${ADMIN_KEY} ${OC_PROCESS_VAL_SWITCH} HEKETI_USER_KEY=${USER_KEY} heketi | ${CLI} create -f - 2>&1"
+  eval_output "${CLI} process ${OC_PROCESS_VAL_SWITCH} HEKETI_ADMIN_KEY_SECRET=${ADMIN_KEY_SECRET} ${OC_PROCESS_VAL_SWITCH} HEKETI_USER_KEY_SECRET=${USER_KEY_SECRET} heketi | ${CLI} create -f - 2>&1"
 else
   eval_output "${CLI} create -f ${TEMPLATES}/heketi-deployment.yaml 2>&1"
 fi

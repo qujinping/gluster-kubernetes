@@ -1,0 +1,136 @@
+#!/bin/bash
+# Copyright (c) 2016 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+NAMESPACE=""
+WAIT=300
+ADMIN_KEY_SECRET="heketi-admin-secret"
+USER_KEY_SECRET="heketi-user-secret"
+
+output() {
+  opts="-e"
+  if [[ "${1}" == "-n" ]]; then
+    opts+="n"
+    shift
+  fi
+  out="${*}"
+  echo "$opts" "${out}"
+  if [[ "x${LOG_FILE}" != "x" ]]; then
+    if [[ "${out}" == "\033["K* ]]; then
+      out="${out:6}"
+    fi
+    if [[ "${out}" == "\033["*A ]]; then
+      out="---"
+    fi
+    echo $opts "${out}" >> "${LOG_FILE}"
+  fi
+}
+
+debug() {
+  if [[ ${VERBOSE} -eq 1 ]]; then
+    output "${@}"
+  fi
+}
+
+eval_output() {
+  cmd="${1}"
+  while read -r line; do
+    if [[ "${line}" == return\ [0-9]* ]]; then
+      eval "${line}"
+    fi
+    output "${line}"
+  done < <(
+    eval "${cmd}"
+    echo "return $?"
+  )
+}
+
+abort() {
+  exit 1
+}
+
+if [[ "x${CLI}" == "x" ]]; then
+  kubectl=$(type kubectl 2>/dev/null | awk '{print $3}')
+  oc=$(type oc 2>/dev/null | awk '{print $3}')
+  if [[ "x${oc}" != "x" ]]; then
+    CLI="${oc}"
+  elif [[ "x${kubectl}" != "x" ]]; then
+    CLI="${kubectl}"
+  else
+    output "Container platform CLI (e.g. kubectl, oc) not found."
+    exit 1
+  fi
+fi
+
+if [[ "${CLI}" == *oc ]]; then
+  output "Using OpenShift CLI."
+elif [[ "${CLI}" == *kubectl ]]; then
+  output "Using Kubernetes CLI."
+else
+  output "Unknown CLI '${CLI}'."
+  exit 1
+fi
+
+if [[ -z "$NAMESPACE" ]]; then
+  NAMESPACE=$(${CLI} config get-contexts | awk '/^\*/ {print $5}')
+  if [[ -z "$NAMESPACE" ]]; then
+    NAMESPACE="default"
+  fi
+fi
+
+${CLI} get namespaces ${NAMESPACE} 2>/dev/null
+if [[ ${?} -eq 0 ]]; then
+  output "Using namespace \"${NAMESPACE}\"."
+  CLI="${CLI} -n ${NAMESPACE}"
+else
+  output "Namespace '${NAMESPACE}' not found."
+  exit 1
+fi
+
+s=0
+heketi_service=""
+debug -n "Determining heketi service URL ... "
+while [[ "x${heketi_service}" == "x" ]] || [[ "${heketi_service}" == "<none>" ]]; do
+  if [[ ${s} -ge ${WAIT} ]]; then
+    debug "Timed out waiting for heketi service."
+    break
+  fi
+  sleep 1
+  ((s+=1))
+  heketi_service=$(${CLI} describe svc/heketi | grep "Endpoints:" | awk '{print $2}')
+done
+
+if [[ "${CLI}" == *oc\ * ]]; then
+  heketi_service=$(${CLI} describe routes/heketi | grep "Requested Host:" | awk '{print $3}')
+fi
+
+hello=$(curl "http://${heketi_service}/hello" 2>/dev/null)
+if [[ "${hello}" != "Hello from Heketi" ]]; then
+  output "Failed to communicate with heketi service."
+  if [[ "${CLI}" == *oc\ * ]]; then
+    output "Please verify that a router has been properly configured."
+  fi
+  exit 1
+else
+  debug "OK"
+  output "heketi is now running and accessible via http://${heketi_service}/"
+fi
+
+if [[ "${CLI}" == *oc\ * ]]; then
+  heketi_admin_key=$(${CLI} get secret heketi-admin-secret -o yaml |grep "key: " |awk '{print $2}' |base64 --decode)
+  export HEKETI_CLI_KEY=${heketi_admin_key}
+fi
+
+heketi-cli --server http://${heketi_service} --user admin $*

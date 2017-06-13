@@ -65,9 +65,15 @@ objects:
           imagePullPolicy: IfNotPresent
           env:
           - name: HEKETI_USER_KEY
-            value: ${HEKETI_USER_KEY}
+            valueFrom:
+              secretKeyRef:
+                name: ${HEKETI_USER_KEY_SECRET}
+                key: key
           - name: HEKETI_ADMIN_KEY
-            value: ${HEKETI_ADMIN_KEY}
+            valueFrom:
+              secretKeyRef:
+                name: ${HEKETI_ADMIN_KEY_SECRET}
+                key: key
           - name: HEKETI_EXECUTOR
             value: kubernetes
           - name: HEKETI_FSTAB
@@ -104,9 +110,11 @@ objects:
           configMap:
             name: heketi-config
 parameters:
-- name: HEKETI_USER_KEY
+- name: HEKETI_USER_KEY_SECRET
   displayName: Heketi User Secret
   description: Set secret for those creating volumes as type _user_
-- name: HEKETI_ADMIN_KEY
+  value: heketi-user-secret
+- name: HEKETI_ADMIN_KEY_SECRET
   displayName: Heketi Administrator Secret
   description: Set secret for administration of the Heketi service as user _admin_
+  value: heketi-admin-secret
