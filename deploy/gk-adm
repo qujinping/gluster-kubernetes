@@ -128,9 +128,9 @@ else
   output "heketi is now running and accessible via http://${heketi_service}/"
 fi
 
+heketi_admin_key=""
 if [[ "${CLI}" == *oc\ * ]]; then
   heketi_admin_key=$(${CLI} get secret heketi-admin-secret -o yaml |grep "key: " |awk '{print $2}' |base64 --decode)
-  export HEKETI_CLI_KEY=${heketi_admin_key}
 fi
 
-heketi-cli --server http://${heketi_service} --user admin $*
+heketi-cli --server http://${heketi_service} --user admin --secret "${heketi_admin_key}" $*

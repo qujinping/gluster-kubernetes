@@ -561,8 +561,13 @@ else
   debug "OK"
 fi
 
+heketi_admin_key=""
+if [[ "${CLI}" == *oc\ * ]]; then
+  heketi_admin_key=$(${CLI} get secret heketi-admin-secret -o yaml |grep "key: " |awk '{print $2}' |base64 --decode)
+fi
+
 load_temp=$(mktemp)
-eval_output "heketi-cli -s http://${heketi_service} --user admin --secret \"${ADMIN_KEY}\" topology load --json=${TOPOLOGY} 2>&1" | tee "${load_temp}"
+eval_output "heketi-cli -s http://${heketi_service} --user admin --secret \"${heketi_admin_key}\" topology load --json=${TOPOLOGY} 2>&1" | tee "${load_temp}"
 grep -q "Unable" "${load_temp}"
 unable=$?
 rm "${load_temp}"
@@ -577,7 +582,7 @@ else
   output "heketi topology loaded."
 fi
 
-eval_output "heketi-cli -s http://${heketi_service} --user admin --secret \"${ADMIN_KEY}\" setup-openshift-heketi-storage --image alpine 2>&1"
+eval_output "heketi-cli -s http://${heketi_service} --user admin --secret \"${heketi_admin_key}\" setup-openshift-heketi-storage --image alpine 2>&1"
 if [[ ${?} != 0 ]]; then
   output "Failed on setup openshift heketi storage"
   exit 1
