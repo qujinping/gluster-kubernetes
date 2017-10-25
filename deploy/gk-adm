@@ -135,4 +135,3 @@ fi
 
 BASE="`pwd`/`dirname $0`/"
 $BASE/heketi-cli --server http://${heketi_service} --user admin --secret "${heketi_admin_key}" $*
-./heketi-cli --server http://${heketi_service} --user admin --secret "${heketi_admin_key}" $*
