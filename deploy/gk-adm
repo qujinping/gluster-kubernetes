@@ -133,4 +133,4 @@ if [[ "${CLI}" == *oc\ * ]]; then
   heketi_admin_key=$(${CLI} get secret heketi-admin-secret -o yaml |grep "key: " |awk '{print $2}' |base64 --decode)
 fi
 
-heketi-cli --server http://${heketi_service} --user admin --secret "${heketi_admin_key}" $*
+./heketi-cli --server http://${heketi_service} --user admin --secret "${heketi_admin_key}" $*
